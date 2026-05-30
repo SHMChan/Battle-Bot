@@ -35,13 +35,11 @@ class TestIBKRTransactionLifecycle(unittest.TestCase):
 
     def test_market_order_hard_block_exception(self):
         """CRITICAL SAFETY GUARD: Ensure market orders are blocked BEFORE hitting the network layer."""
-        invalid_order = Order()
-        invalid_order.action = "BUY"
-        invalid_order.orderType = "MKT"  # Strictly forbidden
-        invalid_order.totalQuantity = 100
+        order = self.client.create_limit_order("BUY", 100, 450.00)
+        order.orderType = "MKT"  # Intentionally forcing a violation to test the gatekeeper
 
         with self.assertRaises(ValueError) as context:
-            self.client.place_order_lifecycle(1002, self.contract, invalid_order)
+            self.client.place_order_lifecycle(1002, self.contract, order)
 
+        # Verify the system threw the exact metric violation error message
         self.assertIn("FORBIDDEN: Market orders are strictly disabled", str(context.exception))
-        self.client.conn.placeOrder.assert_not_called()

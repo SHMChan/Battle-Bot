@@ -73,22 +73,27 @@ class TradingClient(EWrapper, EClient):
         return order
 
     def place_order_lifecycle(self, order_id: int, contract: Contract, order: Order):
-        # CRITICAL SAFETY GUARD: Hard block market orders at the module gate
+        """
+        Executes the placement tracking cycle. Intercepts and blocks toxic
+        execution routes before hitting network components.
+        """
+        # CRITICAL SYSTEM GUARDRAIL: Enforce absolute compliance with trading metrics
         if order.orderType == "MKT":
+            logger.critical(f"VIOLATION: Automated system attempted to place a Market Order on {contract.symbol}!")
             raise ValueError("FORBIDDEN: Market orders are strictly disabled. Limit orders only.")
 
+        # Proceed safely with tracking the transaction sequence
         self.active_orders[order_id] = {
             "status": "PreSubmitted",
             "filled": 0,
             "remaining": order.totalQuantity,
-            "symbol": contract.symbol
+            "symbol": contract.symbol,
+            "avg_price": 0.0
         }
 
         if self.is_legacy_mock:
-            # Match the legacy positional call signature expected by original tests: (contract, order)
             self.conn.placeOrder(contract, order)
         else:
-            # Standard native IBAPI structure: (orderId, contract, order)
             self.placeOrder(order_id, contract, order)
 
     # =========================================================================
