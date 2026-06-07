@@ -1,21 +1,22 @@
-# Byte-compiled / optimized / DLL files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Environments
+*.egg-info/
 .venv/
-venv/
-ENV/
+dist/
+build/
 
-# pytest and testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Environment
+.env
 
-# IDEs and editors
-.vscode/
+# IDE
 .idea/
+.vscode/
 
-# IBKR / ib_insync local logs (if any are generated)
-*.log
+# Pytest
+.pytest_cache/

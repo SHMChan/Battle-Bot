@@ -64,7 +64,7 @@ class TradingClient(EWrapper, EClient):
         contract = Contract()
         contract.symbol = symbol
         contract.secType = "STK"
-        contract.exchange = "SMART"
+        contract.exchange ="COBE"
         contract.currency = "USD"
 
         order = self.create_limit_order(action, quantity, limit_price)

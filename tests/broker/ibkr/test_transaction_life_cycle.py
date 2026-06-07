@@ -31,7 +31,7 @@ class TestIBKRTransactionLifecycle(unittest.TestCase):
         self.contract = Contract()
         self.contract.symbol = "SPY"
         self.contract.secType = "STK"
-        self.contract.exchange = "SMART"
+        self.contract.exchange ="COBE"
         self.contract.currency = "USD"
 
     def tearDown(self):
