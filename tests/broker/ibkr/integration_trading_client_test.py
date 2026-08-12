@@ -1,5 +1,6 @@
 import time
 from src.broker.ibkr.trading_client import TradingClient
+from src.broker.ibkr.config import PORT
 
 
 def run_integration_test():
@@ -8,7 +9,7 @@ def run_integration_test():
 
     try:
         # Use a unique client ID for integration tests
-        client.connect(host='127.0.0.1', port=4002, client_id=99)
+        client.connect(host='127.0.0.1', port=PORT, client_id=99)
         print("Connected successfully!")
 
         # 1. Test Account Summary Ingestion
