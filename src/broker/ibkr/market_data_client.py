@@ -3,6 +3,7 @@ import threading
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
+from src.broker.ibkr.config import PORT
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class MarketDataClient(EWrapper, EClient):
 
         # 2. Extract configuration variables with clear safety fallbacks
         self.host = kwargs.get("host", "127.0.0.1")
-        self.port = kwargs.get("port", 7497)
+        self.port = kwargs.get("port", PORT)
 
         assigned_id = kwargs.get("client_id", kwargs.get("clientId", 2))
         self.client_id = assigned_id
@@ -43,6 +44,12 @@ class MarketDataClient(EWrapper, EClient):
         """Increments and returns a unique, collision-free tracking ID."""
         self._next_req_id += 1
         return self._next_req_id
+
+    def nextValidId(self, orderId: int):
+        """Fires after the full IBKR handshake — the first safe point to send requests.
+        Sets delayed market data mode so all subsequent reqMktData calls use delayed quotes."""
+        self.reqMarketDataType(3)
+        logger.info("MarketDataClient: Connected — market data type set to delayed (3).")
 
     # =========================================================================
     # Equity Methods
@@ -309,6 +316,70 @@ class MarketDataClient(EWrapper, EClient):
         print(f"\n📋 Option Chain Complete for {symbol}! "
               f"{len(chain.get('expirations', []))} expiries, "
               f"{len(chain.get('strikes', []))} strikes.")
+
+    def tickPrice(self, reqId: int, tickType: int, price: float, attrib):
+        """
+        Handles live price ticks from reqMktData.
+
+        Tick types used:
+          1  = bid price
+          2  = ask price
+          24 = implied volatility (IV) for the underlying
+
+        Routes data to the appropriate waiting event:
+          - IV data    → _iv_data / _iv_events
+          - Option bid/ask → _option_price_data / _option_price_events
+        """
+        # Tick 106 = impvolat (IV) for STK underlying — tick 24 is futures/options only
+        if tickType == 106 and price > 0:
+            iv_events = getattr(self, "_iv_events", {})
+            iv_data   = getattr(self, "_iv_data",   {})
+            if reqId in iv_events:
+                iv_data[reqId] = price
+                iv_events[reqId].set()
+                return
+
+        # Live:    tick 1 = bid,         tick 2 = ask
+        # Delayed: tick 66 = delayed bid, tick 67 = delayed ask
+        BID_TICKS = {1, 66}
+        ASK_TICKS = {2, 67}
+
+        option_events = getattr(self, "_option_price_events", {})
+        option_data   = getattr(self, "_option_price_data",   {})
+        if reqId in option_events and price > 0:
+            # Always capture full quote so callers reading _option_quote_data get both sides
+            quote_data = getattr(self, "_option_quote_data", {})
+            if reqId not in quote_data:
+                quote_data[reqId] = {}
+            if tickType in BID_TICKS:
+                quote_data[reqId]["bid"] = price
+            elif tickType in ASK_TICKS:
+                quote_data[reqId]["ask"] = price
+            self._option_quote_data = quote_data
+
+            # Signal event for whichever side this req ID was registered for
+            entry = option_events[reqId]
+            side  = entry.get("side", "")
+            if (side == "bid" and tickType in BID_TICKS) or \
+               (side == "ask" and tickType in ASK_TICKS):
+                option_data[reqId] = price
+                entry["event"].set()
+
+    def tickSize(self, reqId: int, tickType: int, size: int):
+        """
+        Handles size ticks from reqMktData.
+
+        Tick type 22 = open interest for option contracts.
+        Signals _option_oi_events[reqId] when OI arrives so callers can block on it.
+        """
+        if tickType == 22 and size >= 0:
+            oi_data = getattr(self, "_option_oi_data",   {})
+            oi_data[reqId] = size
+            self._option_oi_data = oi_data
+
+            oi_events = getattr(self, "_option_oi_events", {})
+            if reqId in oi_events:
+                oi_events[reqId].set()
 
     def error(self, id: int, errorCode: int, errorString: str):
         print(f"\n⚠️ IBKR GATEWAY MESSAGE [ID {id}] | Code {errorCode}: {errorString}")

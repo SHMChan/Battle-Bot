@@ -2,13 +2,14 @@ import unittest
 import time
 import threading
 from src.broker.ibkr.market_data_client import MarketDataClient
+from src.broker.ibkr.config import PORT
 
 
 class TestIBKRMarketDataIntegration(unittest.TestCase):
     def setUp(self):
         """Set up a real network connection to a live running IB Gateway/TWS instance."""
         # Port 7497 = TWS Paper, Port 4002 = IB Gateway Paper.
-        self.client = MarketDataClient(host="127.0.0.1", port=4002, client_id=99)
+        self.client = MarketDataClient(host="127.0.0.1", port=PORT, client_id=99)
 
         # Open live TCP socket to the broker
         self.client.connect(self.client.host, self.client.port, clientId=self.client.client_id)
