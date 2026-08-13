@@ -33,7 +33,7 @@ class TestPutContractQuery(unittest.TestCase):
         self.client.connect(self.client.host, self.client.port, clientId=self.client.client_id)
         self.thread = threading.Thread(target=self.client.run, daemon=True)
         self.thread.start()
-        time.sleep(2)
+        self.client._connected_event.wait(timeout=10)
 
     def tearDown(self):
         self.client.disconnect()
