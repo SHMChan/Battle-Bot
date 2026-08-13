@@ -40,6 +40,9 @@ class MarketDataClient(EWrapper, EClient):
         # Populated by securityDefinitionOptionParameter — used by _build_option_contract
         self._trading_class_cache = {}  # (symbol, expiry) -> tradingClass
 
+        # 6. Connection readiness — set in nextValidId once the Gateway handshake completes
+        self._connected_event = threading.Event()
+
     def get_new_req_id(self) -> int:
         """Increments and returns a unique, collision-free tracking ID."""
         self._next_req_id += 1
@@ -48,6 +51,7 @@ class MarketDataClient(EWrapper, EClient):
     def nextValidId(self, orderId: int):
         """Fires after the full IBKR handshake — the first safe point to send requests.
         Sets delayed market data mode so all subsequent reqMktData calls use delayed quotes."""
+        self._connected_event.set()
         self.reqMarketDataType(3)
         logger.info("MarketDataClient: Connected — market data type set to delayed (3).")
 
@@ -381,5 +385,5 @@ class MarketDataClient(EWrapper, EClient):
             if reqId in oi_events:
                 oi_events[reqId].set()
 
-    def error(self, id: int, errorCode: int, errorString: str):
-        print(f"\n⚠️ IBKR GATEWAY MESSAGE [ID {id}] | Code {errorCode}: {errorString}")
+    def error(self, reqId: int, errorTime: int, errorCode: int, errorString: str, advancedOrderRejectJson: str = ""):
+        print(f"\n⚠️ IBKR GATEWAY MESSAGE [ID {reqId}] | Code {errorCode}: {errorString}")

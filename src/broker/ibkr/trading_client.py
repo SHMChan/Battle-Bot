@@ -352,7 +352,7 @@ class TradingClient(EWrapper, EClient):
     def orderStatus(self, orderId: int, status: str, filled: float,
                     remaining: float, avgFillPrice: float, permId: int,
                     parentId: int, lastFillPrice: float, clientId: int,
-                    whyHeld: str):
+                    whyHeld: str, mktCapPrice: float = 0.0):
         if orderId in self.active_orders:
             self.active_orders[orderId].update({
                 "status": status,
@@ -365,8 +365,8 @@ class TradingClient(EWrapper, EClient):
         if status == "Filled" and orderId in self._order_fill_events:
             self._order_fill_events[orderId].set()
 
-    def error(self, id: int, errorCode: int, errorString: str):
-        logger.error(f"IBKR Event Error Context [{id}] Code {errorCode}: {errorString}")
-        if id in self.active_orders:
+    def error(self, reqId: int, errorTime: int, errorCode: int, errorString: str, advancedOrderRejectJson: str = ""):
+        logger.error(f"IBKR Event Error Context [{reqId}] Code {errorCode}: {errorString}")
+        if reqId in self.active_orders:
             if errorCode in [201, 202]:
-                self.active_orders[id]["status"] = "Cancelled" if errorCode == 202 else "Rejected"
+                self.active_orders[reqId]["status"] = "Cancelled" if errorCode == 202 else "Rejected"

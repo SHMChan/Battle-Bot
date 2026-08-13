@@ -10,7 +10,7 @@ from src.strategy.bull_put.expected_move import ExpectedMove
 logger = logging.getLogger(__name__)
 
 # Minimum net credit to qualify a spread for entry
-MIN_NET_CREDIT = 0.20
+MIN_NET_CREDIT = 0.50
 
 # Spread width in dollars (short strike - long strike)
 SPREAD_WIDTH = 10.0
@@ -155,16 +155,17 @@ class BullPutScanner:
                 short_bid, long_ask = self._fetch_leg_prices(expiry, short_strike, long_strike, "P")
 
                 if short_bid is None or long_ask is None:
-                    print(f"      {sigma}σ: ${short_strike:.0f}/${long_strike:.0f} — pricing failed")
+                    print(f"      {sigma}σ: {expiry} ${short_strike:.0f}/${long_strike:.0f} — pricing failed")
                     continue
 
                 net_credit = round(short_bid - long_ask, 4)
-                print(f"      {sigma}σ: ${short_strike:.0f}/${long_strike:.0f} "
+                print(f"      {sigma}σ: {expiry} ${short_strike:.0f}/${long_strike:.0f} "
                       f"| bid ${short_bid:.4f} / ask ${long_ask:.4f} "
                       f"| credit ${net_credit:.4f}")
 
                 if net_credit >= MIN_NET_CREDIT:
-                    print(f"      ✅ QUALIFIES at {sigma}σ — credit ${net_credit:.4f} >= ${MIN_NET_CREDIT}")
+                    print(f"      ✅ QUALIFIES at {sigma}σ — {expiry} ${short_strike:.0f}/${long_strike:.0f} "
+                          f"credit ${net_credit:.4f} >= ${MIN_NET_CREDIT}")
                     return {
                         "expiry":       expiry,
                         "dte":          dte,
